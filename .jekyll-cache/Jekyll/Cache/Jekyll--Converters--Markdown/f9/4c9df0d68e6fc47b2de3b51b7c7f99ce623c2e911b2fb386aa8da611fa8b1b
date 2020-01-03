@@ -1,0 +1,112 @@
+I"�M<p>This blog post will look at building a dynamic networkx graph using <strong>Bokeh</strong> and <strong>NetworkX</strong> libraries in python.<br />
+This is just a experimentation of the concept.</p>
+
+<p>The data being used for this graph is the pass combination between football (soccer) players from a match. The data was scraped from few  online websites.</p>
+
+<p>I’ve already pre-processed the data to make the following columns.
+<em><strong>From, To</strong>: Pass from and to player names.
+ <strong>Game_Time_Start, Game_Time_End</strong>: Game time (in seconds) when the pass starts and ends, 
+ <strong>Start_x, Start_y</strong>: Pass start x and y coordinates,
+ <strong>End_x, End_y</strong>: Pass end x and y coordinates</em>.</p>
+
+<p>Bokeh provides a nice option to plot NetworkX graphs on the web browser. The problem was plotting the graph nodes in custom position (player location on the field) rather than fixed layout like spring circular or any other layout.</p>
+
+<p>With the help of few people on the Bokeh google user group, I was able to sort out that problem.</p>
+
+<p>Going into the <a href="https://github.com/samirak93/dynamic-pass-network/blob/master/myapp/main.py">code</a>, we import the necessary libraries and packages.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>  
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>  
+<span class="kn">from</span> <span class="nn">bokeh.models.widgets</span> <span class="kn">import</span> <span class="n">RangeSlider</span><span class="p">,</span><span class="n">Div</span>  
+<span class="kn">from</span> <span class="nn">bokeh.models</span> <span class="kn">import</span> <span class="n">HoverTool</span>  
+<span class="kn">from</span> <span class="nn">bokeh.io</span> <span class="kn">import</span> <span class="n">curdoc</span>  
+<span class="kn">from</span> <span class="nn">bokeh.layouts</span> <span class="kn">import</span> <span class="n">column</span><span class="p">,</span><span class="n">layout</span>  
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="n">nx</span>  
+<span class="kn">from</span> <span class="nn">bokeh.models.graphs</span> <span class="kn">import</span> <span class="n">from_networkx</span>  
+<span class="kn">from</span> <span class="nn">bokeh.models</span> <span class="kn">import</span> <span class="n">StaticLayoutProvider</span><span class="p">,</span><span class="n">Circle</span><span class="p">,</span><span class="n">LabelSet</span><span class="p">,</span><span class="n">ColumnDataSource</span><span class="p">,</span><span class="n">CustomJS</span>  
+<span class="kn">from</span> <span class="nn">bokeh.plotting</span> <span class="kn">import</span> <span class="n">figure</span>
+</code></pre></div></div>
+
+<p>Then we’re loading the csv file and reading the columns and observations.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">'myapp/data/final_data.csv'</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s">'utf-8'</span><span class="p">)</span>
+<span class="n">pass_player</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="n">final_data</span><span class="o">=</span><span class="n">pass_player</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s">'From'</span><span class="p">,</span><span class="s">'To'</span><span class="p">,</span><span class="s">'Game_Time_Start'</span><span class="p">,</span><span class="s">'Game_Time_End'</span><span class="p">,</span><span class="s">'Start_x'</span><span class="p">,</span><span class="s">'Start_y'</span><span class="p">,</span><span class="s">'End_x'</span><span class="p">,</span><span class="s">'End_y'</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">"Freq"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The “<strong><em>Freq</em></strong>” in the final_data will be now be <strong><em>1</em></strong> for all rows. This will later update as the slider value (time frame) are considered.</p>
+
+<h2 id="player_plot-function">player_plot function</h2>
+
+<p>The player_plot() function plots the NetworkX using bokeh.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">plot</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">plot_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">plot_width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span>
+                  <span class="n">tools</span><span class="o">=</span><span class="s">"save,tap"</span><span class="p">,</span>
+                  <span class="n">x_range</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span> <span class="n">y_range</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span> <span class="n">toolbar_location</span><span class="o">=</span><span class="s">"below"</span><span class="p">)</span>
+<span class="n">plot</span><span class="o">.</span><span class="n">image_url</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="p">[</span><span class="s">"myapp/static/images/base.png"</span><span class="p">],</span> <span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="s">"bottom_left"</span><span class="p">)</span>
+<span class="n">lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="nb">round</span><span class="p">(</span><span class="n">range_slider</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="c1">#low range of slider value
+</span><span class="n">higher</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="nb">round</span><span class="p">(</span><span class="n">range_slider</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c1">#high range of slider value
+</span>
+<span class="c1">#filter the data based on slider values
+</span><span class="n">filter_data</span> <span class="o">=</span> <span class="n">final_data</span><span class="p">[(</span><span class="n">final_data</span><span class="p">[</span><span class="s">'Game_Time_Start'</span><span class="p">]</span><span class="o">&gt;=</span><span class="n">lower</span> <span class="p">)</span><span class="o">&amp;</span> <span class="p">(</span><span class="n">final_data</span><span class="p">[</span><span class="s">'Game_Time_Start'</span><span class="p">]</span><span class="o">&lt;=</span><span class="n">higher</span><span class="p">)]</span>
+<span class="c1">#size of the edges as Freq
+</span><span class="n">size</span> <span class="o">=</span> <span class="n">filter_data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s">'From'</span><span class="p">,</span><span class="s">'To'</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">"Freq"</span><span class="p">)</span>
+<span class="c1">#group the player locations based on where pass starts
+</span><span class="n">grouped</span> <span class="o">=</span> <span class="n">filter_data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s">'To'</span><span class="p">])[[</span><span class="s">'Start_x'</span><span class="p">,</span><span class="s">'Start_y'</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>The following code will build the graph using NetworkX</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grouped</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="n">G</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s">'To'</span><span class="p">],</span><span class="n">pos</span><span class="o">=</span><span class="n">row</span><span class="p">[[</span><span class="s">'Start_x'</span><span class="p">,</span><span class="s">'Start_y'</span><span class="p">]])</span>
+
+<span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">size</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="n">G</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s">'From'</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">'To'</span><span class="p">],</span><span class="n">weight</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s">'Freq'</span><span class="p">])</span>
+
+<span class="n">fixed_pos</span><span class="o">=</span><span class="n">grouped</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">'To'</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s">'list'</span><span class="p">)</span>
+<span class="n">fixed_nodes</span> <span class="o">=</span> <span class="n">fixed_pos</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+<span class="n">pos</span><span class="o">=</span><span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span><span class="s">'pos'</span><span class="p">)</span>
+
+<span class="n">edges</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span>
+
+<span class="n">weights</span> <span class="o">=</span> <span class="p">[</span><span class="n">G</span><span class="p">[</span><span class="n">u</span><span class="p">][</span><span class="n">v</span><span class="p">][</span><span class="s">'weight'</span><span class="p">]</span> <span class="k">for</span> <span class="n">u</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>The <strong><em>from_networkx</em></strong> function in bokeh converts the graph to default layout like spring, circular or any other.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">graph</span> <span class="o">=</span> <span class="n">from_networkx</span><span class="p">(</span><span class="n">G</span><span class="p">,</span><span class="n">nx</span><span class="o">.</span><span class="n">spring_layout</span><span class="p">)</span>  
+<span class="c1">#Use the StaticLayoutProvider to convert the spring_layout back to user defined layout
+</span><span class="n">fixed_layout_provider</span> <span class="o">=</span> <span class="n">StaticLayoutProvider</span><span class="p">(</span><span class="n">graph_layout</span><span class="o">=</span><span class="n">pos</span><span class="p">)</span>  
+<span class="n">graph</span><span class="o">.</span><span class="n">layout_provider</span> <span class="o">=</span> <span class="n">fixed_layout_provider</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">node_renderer</span><span class="o">.</span><span class="n">glyph</span> <span class="o">=</span> <span class="n">Circle</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span><span class="n">fill_color</span><span class="o">=</span><span class="s">'orangered'</span><span class="p">)</span>  
+
+<span class="n">plot</span><span class="o">.</span><span class="n">xgrid</span><span class="o">.</span><span class="n">grid_line_color</span> <span class="o">=</span> <span class="bp">None</span>  
+<span class="n">plot</span><span class="o">.</span><span class="n">ygrid</span><span class="o">.</span><span class="n">grid_line_color</span> <span class="o">=</span> <span class="bp">None</span>  
+<span class="n">plot</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">visible</span><span class="o">=</span><span class="bp">False</span>
+<span class="c1">#use the line_width to indicate the weight of each node. Thicker line means larger freq between 2 nodes.
+</span><span class="n">graph</span><span class="o">.</span><span class="n">edge_renderer</span><span class="o">.</span><span class="n">data_source</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s">"line_width"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">G</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">)[</span><span class="s">'weight'</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">edges</span><span class="p">()]</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">edge_renderer</span><span class="o">.</span><span class="n">glyph</span><span class="o">.</span><span class="n">line_width</span> <span class="o">=</span> <span class="p">{</span><span class="s">'field'</span><span class="p">:</span> <span class="s">'line_width'</span><span class="p">}</span>
+<span class="n">plot</span><span class="o">.</span><span class="n">renderers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>  
+<span class="n">pos_values</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fixed_pos</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>  
+
+<span class="n">coordinates</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">pos_values</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">'x'</span><span class="p">,</span><span class="s">'y'</span><span class="p">])</span>  
+<span class="n">coordinates</span><span class="p">[</span><span class="s">'player'</span><span class="p">]</span> <span class="o">=</span><span class="n">fixed_pos</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>  
+<span class="n">source</span> <span class="o">=</span> <span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">coordinates</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">coordinates</span><span class="o">.</span><span class="n">y</span><span class="p">,</span><span class="n">player</span><span class="o">=</span><span class="n">coordinates</span><span class="o">.</span><span class="n">player</span><span class="p">))</span>  
+<span class="n">labels</span> <span class="o">=</span> <span class="n">LabelSet</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s">'x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s">'y'</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">'player'</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span><span class="n">x_offset</span><span class="o">=-</span><span class="mi">45</span><span class="p">,</span> <span class="n">y_offset</span><span class="o">=-</span><span class="mi">25</span><span class="p">,</span><span class="n">text_color</span><span class="o">=</span><span class="s">'black'</span><span class="p">,</span><span class="n">render_mode</span><span class="o">=</span><span class="s">'canvas'</span><span class="p">,</span><span class="n">text_font_size</span><span class="o">=</span><span class="s">'10pt'</span><span class="p">)</span>  
+<span class="n">plot</span><span class="o">.</span><span class="n">renderers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>  
+<span class="k">return</span> <span class="n">plot</span>
+</code></pre></div></div>
+
+<p>The rest of the code are self explanatory.
+The entire code can be found <a href="https://github.com/samirak93/dynamic-pass-network/blob/master/myapp/main.py">here</a>.</p>
+
+<p>I’ve hosted the final output on Heroku App. <a href="https://dynamic-pass-network.herokuapp.com/myapp">App Link</a>.</p>
+
+<p>In case you find it difficult to host bokeh plots on heroku, please read my <a href="https://samirak93.github.io/analytics/Deploy-bokeh-server-plots-using-heroku.html">other blog post</a> where I’ve explained the process.</p>
+
+<p>Leave your feedback below or contact me using <a href="https://twitter.com/Samirak93">Twitter</a> or <a href="http://linkedin.com/in/samirakumar/">LinkedIN</a> or you can e-mail me (e-mail id on my contact page).</p>
+
+<p>Thanks.</p>
+:ET

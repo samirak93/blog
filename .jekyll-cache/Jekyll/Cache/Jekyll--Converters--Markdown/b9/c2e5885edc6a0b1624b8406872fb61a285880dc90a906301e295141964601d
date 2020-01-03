@@ -1,0 +1,8 @@
+I"Á<p>An easy way to visualize player tracking data with animation. Built using <a href="https://github.com/bokeh/bokeh">Bokeh Plots</a>, this tool can be used to visualise player movements for all sport. It also includes visualising voronoi and convex hulls, player speed and total distance covered by each player, interactively.</p>
+
+<p>Link to tool: <a href="https://github.com/samirak93/Game-Animation">Game Animation</a></p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/projects/proj-9/soccer_animation.gif?raw=true" width="700" /></p>
+
+<p><img src="https://github.com/samirak93/analytics/blob/gh-pages/assets/img/projects/proj-9/nfl.gif?raw=true" width="700" /></p>
+:ET

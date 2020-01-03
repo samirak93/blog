@@ -1,0 +1,113 @@
+I"U<p>This is a small blog post, guiding you with steps to deploy a bokeh python server plot using Heroku. There are very little resources online, that outline these processes. The documentation is not very clear (least I found it confusing, when different people suggest different methods) and hopefully this blog provides a clear guideline.</p>
+
+<p>Assuming you’ve your server plot ready to be deployed, let’s begin by creating folders, in Github repository, that’d be required for heroku. My <strong>herokuapp</strong> GitHub <a href="https://github.com/samirak93/herokuapp">repository</a> has the following folders directory.</p>
+
+<p>myapp <strong>(folder)</strong><br />
+   |<br />
+   +—data <strong>(folder)</strong><br />
+   |    +—data.csv<br />
+   |<br />
+   +—main.py<br />
+   +—static <strong>(folder)</strong><br />
+   |    +—images <strong>(folder)</strong><br />
+   |    |    +—images.png<br /></p>
+
+<p>This is how my repository looks like.</p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/repo.PNG" alt="alt text" /></p>
+
+<p>This is easy since this is how you’d have setup your folders to run the “myapp” locally in your system.</p>
+
+<p>Now, go to <a href="http://heroku.com">http://heroku.com</a> and create a free account or login to your existing account.</p>
+
+<p>Once you login, <strong>create a new app</strong> and <strong><em>remember the name of the app</em></strong>. We’d need to mention the app name in later steps.</p>
+
+<p>The main part of the process, creating text documents for heroku, is the trickiest part. There are various answers online on creating these documents. I had to trial out few methods before getting it right.</p>
+
+<p>So the whole <strong>myapp</strong> folder is within my main repository, <strong>herokuapp</strong>. Inside herokuapp, you’d have to create 3 more documents. Note that these file names are case sensitive.</p>
+
+<ul>
+  <li>Procfile</li>
+  <li>requirements.txt</li>
+  <li>runtime.txt</li>
+</ul>
+
+<h3 id="procfile">Procfile</h3>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>web: bokeh serve <span class="nt">--port</span><span class="o">=</span><span class="nv">$PORT</span> <span class="nt">--allow-websocket-origin</span><span class="o">=</span>heroku_app_name.herokuapp.com <span class="nt">--address</span><span class="o">=</span>0.0.0.0 <span class="nt">--use-xheaders</span> myapp
+</code></pre></div></div>
+
+<p>This is where you’d have to mention your app name (created in heroku) and replace “<strong>heroku_app_name</strong>” above with the name of your app. Don’t change anything else in the procfile. “myapp” in Procfile refers to the folder you’ve created within the GitHub repository.</p>
+
+<p>This Procfile is similar to the command <code class="highlighter-rouge">bokeh serve --show myapp</code> that we’d run to display the server plot locally.</p>
+
+<h3 id="requirementstxt">requirements.txt</h3>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">bokeh</span><span class="o">==</span>0.12.15
+<span class="nv">Jinja2</span><span class="o">==</span>2.10
+<span class="nv">MarkupSafe</span><span class="o">==</span>1.0
+<span class="nv">numpy</span><span class="o">==</span>1.14.2
+<span class="nv">pandas</span><span class="o">==</span>0.19.2
+<span class="nv">PyYAML</span><span class="o">==</span>3.10
+<span class="nv">requests</span><span class="o">==</span>2.18.4
+scikit-learn<span class="o">==</span>0.19.1
+<span class="nv">scipy</span><span class="o">==</span>1.0.1
+<span class="nv">tornado</span><span class="o">==</span>5.0.1
+</code></pre></div></div>
+
+<p>The issue I’d faced with requirements is that bokeh and tornado version has to be correct, to avoid timeout errors on heroku. So I figured it out (from stackoverflow and other GitHub bokeh chat) that <strong>tornado version</strong> has to be mentioned as <strong>5.0.1</strong>. Apart from scikit-learn (which I needed for my code), <em>all the other requirements are mandatory (bokeh server plot uses them)</em>. Incase you use other libraries in your python code, add them in the list along with their versions.</p>
+
+<h3 id="runtimetxt">runtime.txt</h3>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python-2.7.14
+</code></pre></div></div>
+
+<p><strong>Note:-</strong> Heroku supports only 2.7.14 version, if your python version is 2.7.</p>
+
+<p>Once you create the 3 files, the repository herokuapp looks like this.</p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/herokuapp.png" alt="herokuapp repository" /></p>
+
+<ul>
+  <li>herokuapp (GitHub repository)</li>
+</ul>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+-Procfile&lt;br/&gt;
++-requirements.txt&lt;br/&gt;
++-runtime.txt&lt;br/&gt;
++---myapp <span class="o">(</span>bokeh server app folder<span class="o">)</span>
+</code></pre></div></div>
+
+<p>Now it’s time to deploy the bokeh plot. You could use git commands to deploy the files from command/terminal, or you could manually deploy it from heroku dashboard (which I’d explain here).</p>
+
+<p>Go to the heroku dashboard <a href="https://dashboard.heroku.com/apps/">https://dashboard.heroku.com/apps/</a> and select the app you’ve created. Once inside it, go to the “<strong>deploy</strong>” tab and select “<strong>Deployment method</strong>” as GitHub and connect your GitHub account with the app.</p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/connect_github.png" alt="GitHub Connect" /></p>
+
+<p>Once that is completed, scroll down and select the repository you’ve created for the bokeh plot. The repository can be selected from “<strong>App connected to GitHub</strong>” on the same deploy page. In my case, the repository is herokuapp.</p>
+
+<p>Once that is done, you can either choose “Automatic deploy’, which will deploy and update the app automatically, every time you make a commit to the repository.</p>
+
+<p>Else you could select “Manual deploy” and deploy the repository manually each time you update the repository.
+You can check build log inside “<strong>Build **master</strong>“**. Any error (in requirements/runtime txt files) will be shown here.</p>
+
+<p>After successful deployment, you can view the app from  <code class="highlighter-rouge">https://**your_app_name**.herokuapp.com/myapp</code></p>
+
+<p><strong>Note:</strong> Since you’re using a free version of herokuapp, there’d be some delay in rendering your plot online.</p>
+
+<p>The app log (post deployment) can be seen by selecting more–&gt; view logs in your app dashboard page.</p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/app_log.png" alt="app log" /></p>
+
+<p>All the runtime issues and errors will be provided on the log.</p>
+
+<p>You can find my bokeh server plot hosted <a href="https://cross-locations.herokuapp.com/myapp"><strong>here</strong></a></p>
+
+<p>Hope this blog helps you to deploy your own bokeh server plots on Heroku.</p>
+
+<p>You can find my contact information on my <a href="https://samirak93.github.io/analytics/pages/contact.html">contact page.</a></p>
+
+<p>Any comments/feedback are always appreciated.</p>
+
+<p>Thank you.</p>
+:ET

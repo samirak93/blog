@@ -1,0 +1,295 @@
+I"W�<p>This blog post looks at creating an animation slider (with Play and Pause buttons) to plot 2D coordinates of player movement in a soccer game. Also, this post explains the steps to create a toggle button, to show/hide the convex hull plot of the teams. I’ve used <a href="https://bokeh.pydata.org">Bokeh</a> to plot the viz. Bokeh gives a good looking viz in the browser and also provides smooth interface for animation. I’ve also tried the same with <a href="https://matplotlib.org">Matplotlib</a> and it was successful. But the features of bokeh (compared to matplotlib) makes it a better choice, for this purpose alone. I could write a separate blog post to outline the process in Matplotlib.</p>
+
+<p>The dataset used in the post is from <strong>STATS</strong>. You can submit an <a href="https://www.stats.com/data-science/">online</a> request to obtain the dataset from them. The data used in the viz is not available for public use.</p>
+
+<p>Note that I’ve already done some pre-processing to clean the raw data since the data from STATS doesn’t have player/team tags and we’d have to manually add them. I’m not going to explain in depth about the data cleaning process. Once you get the dataset and have doubts on adding team/player tags, do contact me on twitter/mail. Also, an similar dataset can be used (for any sports) as long as you’ve the below columns.</p>
+
+<p>Once you’ve the data file ready, create the below folder directory, which would be needed to run the bokeh server.</p>
+
+<p>myapp<br />
+   |<br />
+   +—data <strong>(folder)</strong><br />
+   |    +—data.csv<br />
+   |<br />
+   +—main.py<br />
+   +—static <strong>(folder)</strong><br />
+   |    +—images <strong>(folder within static)</strong><br />
+   |    |    +—pitch_image.png<br /></p>
+
+<p>Once the player and team tags are added, we’d have the data as below</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">'data/data.csv'</span><span class="p">)</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s">"x"</span><span class="p">,</span> <span class="s">"y"</span><span class="p">,</span> <span class="s">"team_id"</span><span class="p">,</span> <span class="s">"player_id"</span><span class="p">,</span><span class="s">"time"</span><span class="p">]</span>  
+    <span class="n">all_team</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Here,
+ x and y: Player coordinates on the pitch, 
+ team_id: 1 and 2 for each team respectively, 3 for ball,
+ player_id: Ranges from 1-11 for both teams, 12 for ball
+ time: time of sequence.</p>
+
+<p>Now import all necessary packages.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1"># -*- coding: utf-8 -*-
+</span>    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>  
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>  
+    <span class="kn">from</span> <span class="nn">bokeh.io</span> <span class="kn">import</span> <span class="n">curdoc</span>  
+    <span class="kn">from</span> <span class="nn">bokeh.layouts</span> <span class="kn">import</span> <span class="n">row</span><span class="p">,</span> <span class="n">widgetbox</span><span class="p">,</span><span class="n">column</span>  
+    <span class="kn">from</span> <span class="nn">bokeh.models</span> <span class="kn">import</span> <span class="n">ColumnDataSource</span><span class="p">,</span><span class="n">LabelSet</span><span class="p">,</span><span class="n">PointDrawTool</span><span class="p">,</span><span class="n">CustomJS</span>  
+    <span class="kn">from</span> <span class="nn">bokeh.models.widgets</span> <span class="kn">import</span> <span class="n">Slider</span><span class="p">,</span><span class="n">Paragraph</span><span class="p">,</span><span class="n">Button</span><span class="p">,</span><span class="n">CheckboxButtonGroup</span>  
+    <span class="kn">from</span> <span class="nn">bokeh.plotting</span> <span class="kn">import</span> <span class="n">figure</span>  
+    <span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="kn">import</span> <span class="n">ConvexHull</span>
+</code></pre></div></div>
+
+<p>My game sequence time starts at 0. So I’ve created a variable to initialise time and calculated initial player coordinates based on that. Since my slider time will always start at 0 (when the plot is displayed on browser), I’ve initialised the time here as 0.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">i</span><span class="o">=</span><span class="mi">0</span>  
+    <span class="n">x</span> <span class="o">=</span> <span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span>  <span class="c1">#Calculate x based on time
+</span>    <span class="n">y</span> <span class="o">=</span> <span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">y</span>  <span class="c1">#Calculate y based on time
+</span></code></pre></div></div>
+
+<p>To plot the player labels and team colour, I’ve created 2 separate variables <strong>player_id</strong> and <strong>c</strong>. This is bit like hard coding the labels and colour. Since these values will not change for the whole sequence, it doesn’t matter if we hard code this or use any other alternative method. You could also use <strong>factor_cmap</strong> feature on bokeh, for player color.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">player_id</span><span class="o">=</span><span class="p">[</span><span class="s">'1'</span><span class="p">,</span><span class="s">'2'</span><span class="p">,</span><span class="s">'3'</span><span class="p">,</span><span class="s">'4'</span><span class="p">,</span><span class="s">'5'</span><span class="p">,</span><span class="s">'6'</span><span class="p">,</span><span class="s">'7'</span><span class="p">,</span><span class="s">'8'</span><span class="p">,</span><span class="s">'9'</span><span class="p">,</span><span class="s">'10'</span><span class="p">,</span><span class="s">'11'</span><span class="p">,</span><span class="s">'1'</span><span class="p">,</span><span class="s">'2'</span><span class="p">,</span><span class="s">'3'</span><span class="p">,</span><span class="s">'4'</span><span class="p">,</span><span class="s">'5'</span><span class="p">,</span><span class="s">'6'</span><span class="p">,</span><span class="s">'7'</span><span class="p">,</span><span class="s">'8'</span><span class="p">,</span><span class="s">'9'</span><span class="p">,</span><span class="s">'10'</span><span class="p">,</span><span class="s">'11'</span><span class="p">,</span><span class="s">' '</span><span class="p">]</span>  
+    
+    <span class="c1">#The last value is left empty to not show label for the ball.
+</span>    
+    <span class="n">c</span><span class="o">=</span><span class="p">[</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'dodgerblue'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'orangered'</span><span class="p">,</span><span class="s">'gold'</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>Once we’ve the required variables, create the <strong>ColumnDataSource</strong> as below.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">source</span> <span class="o">=</span> <span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">player_id</span><span class="o">=</span><span class="n">player_id</span><span class="p">,</span><span class="n">color</span><span class="o">=</span><span class="n">c</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>Now we should plot the background image (football pitch). For this, store the image inside the <strong>static/images</strong> folder within myapp folder.</p>
+
+<p>Now create the plot as below.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">#Set up plot  
+</span>    <span class="n">plot</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">'base'</span><span class="p">,</span><span class="n">plot_height</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span> <span class="n">plot_width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">"Game Animation"</span><span class="p">,</span>  
+                  <span class="n">tools</span><span class="o">=</span><span class="s">"reset,save"</span><span class="p">,</span>  
+                  <span class="n">x_range</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">52.5</span><span class="p">,</span><span class="mf">52.5</span><span class="p">],</span> <span class="n">y_range</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">34</span><span class="p">,</span> <span class="mi">34</span><span class="p">],</span><span class="n">toolbar_location</span><span class="o">=</span><span class="s">"below"</span><span class="p">)</span>
+                  
+    <span class="n">plot</span><span class="o">.</span><span class="n">image_url</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="p">[</span><span class="s">"myapp/static/images/base.png"</span><span class="p">],</span><span class="n">x</span><span class="o">=-</span><span class="mf">52.5</span><span class="p">,</span><span class="n">y</span><span class="o">=-</span><span class="mi">34</span><span class="p">,</span><span class="n">w</span><span class="o">=</span><span class="mi">105</span><span class="p">,</span><span class="n">h</span><span class="o">=</span><span class="mi">68</span><span class="p">,</span><span class="n">anchor</span><span class="o">=</span><span class="s">"bottom_left"</span><span class="p">)</span>
+    <span class="c1">#x,y,w,h are given based on STATS definition of the dataset
+</span>    <span class="c1">#hide axis and grid lines
+</span>    <span class="n">plot</span><span class="o">.</span><span class="n">xgrid</span><span class="o">.</span><span class="n">grid_line_color</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">plot</span><span class="o">.</span><span class="n">ygrid</span><span class="o">.</span><span class="n">grid_line_color</span> <span class="o">=</span> <span class="bp">None</span>  
+    <span class="n">plot</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">visible</span><span class="o">=</span><span class="bp">False</span>
+
+
+    <span class="c1">#Plot the player coordinates
+</span>    <span class="n">st</span><span class="o">=</span><span class="n">plot</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="s">'x'</span><span class="p">,</span><span class="s">'y'</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span><span class="n">size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span><span class="n">fill_color</span><span class="o">=</span><span class="s">'color'</span><span class="p">)</span>
+
+    <span class="c1">#Add labels to the scatter plot
+</span>    <span class="n">labels</span><span class="o">=</span><span class="n">LabelSet</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s">'x'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s">'y'</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">'player_id'</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s">'glyph'</span><span class="p">,</span>  
+                      <span class="n">x_offset</span><span class="o">=-</span><span class="mi">5</span><span class="p">,</span> <span class="n">y_offset</span><span class="o">=-</span><span class="mi">7</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span> <span class="n">render_mode</span><span class="o">=</span><span class="s">'canvas'</span><span class="p">,</span><span class="n">text_color</span><span class="o">=</span><span class="s">'white'</span><span class="p">,</span><span class="n">text_font_size</span><span class="o">=</span><span class="s">"10pt"</span><span class="p">)</span>
+                      
+    <span class="n">plot</span><span class="o">.</span><span class="n">add_layout</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+
+    <span class="n">layout</span> <span class="o">=</span> <span class="n">column</span><span class="p">(</span><span class="n">row</span><span class="p">(</span><span class="n">plot</span><span class="p">))</span>  <span class="c1">#add plot to layout
+</span>      
+    <span class="n">curdoc</span><span class="p">()</span><span class="o">.</span><span class="n">add_root</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+    
+    <span class="n">curdoc</span><span class="p">()</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s">"Game Animation"</span>
+</code></pre></div></div>
+
+<p>Now run the bokeh server using <strong>bokeh serve –show myapp</strong>. For the plot to appear, run the bokeh serve from the directory where your myapp folder is placed. For example, If the myapp folder is located inside your desktop/python directory, traverse (cd desktop/python) to the folder on terminal/cmd and run the bokeh serve command. This should show the plot in the browser.</p>
+
+<p>The plot will only show the player coordinates at time 0. Now we need to add a slider and vary the time to show the full sequence of event.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">#Add a slider freq
+</span>    <span class="n">freq</span> <span class="o">=</span> <span class="n">Slider</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">"Game Time"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="nb">min</span><span class="p">(),</span> <span class="n">end</span><span class="o">=</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="nb">max</span><span class="p">(),</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>We define the start and end time using <strong>all_team.time.unique().min()/max()</strong>.</p>
+
+<p>Once the slider is created, you’d need to build a function to get the call back when slider is updated.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="k">def</span> <span class="nf">update_data</span><span class="p">(</span><span class="n">attrname</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>  
+        <span class="n">k</span> <span class="o">=</span> <span class="n">freq</span><span class="o">.</span><span class="n">value</span> <span class="c1">#holds the current time value of slider after updating the slider
+</span>        
+        <span class="c1">#now again plot x and y based on time on slider
+</span>        <span class="n">x</span> <span class="o">=</span> <span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span> <span class="o">==</span> <span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">x</span>  
+        <span class="n">y</span> <span class="o">=</span> <span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span> <span class="o">==</span> <span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">y</span>
+        <span class="c1">#update the CDS source with new x and y values. player_id and c remains same and it'll be plotted on top of new x and y.
+</span>        
+        <span class="n">source</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">player_id</span><span class="o">=</span><span class="n">player_id</span><span class="p">,</span><span class="n">color</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Every time the <strong>source</strong> gets updated, all the plots associated with ‘<strong>source</strong>’ will get updated as well, which includes the scatter plot <strong>st</strong> and <strong>labels</strong>, since we’re using this source to plot those data.</p>
+
+<p>To call the above function when the slider is updated, we add</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="p">[</span><span class="n">freq</span><span class="p">]:</span>  
+        <span class="n">w</span><span class="o">.</span><span class="n">on_change</span><span class="p">(</span><span class="s">'value'</span><span class="p">,</span> <span class="n">update_data</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Now add the slider to the plot layout using the Widgetbox.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">inputs</span> <span class="o">=</span> <span class="n">widgetbox</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Now if you run the bokeh serve again, you should be able to see the slider and the plot gets updated based on the change in the slider.</p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/plot.png" alt="enter image description here" /></p>
+
+<p>Now add the button to create the play and pause animation.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">button</span> <span class="o">=</span> <span class="n">Button</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">'► Play'</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>To allow <code class="highlighter-rouge">► symbol</code> in your browser, add <code class="highlighter-rouge">**# -*- coding: utf-8 -*-**</code> in the beginning of your code.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="k">def</span> <span class="nf">animate_update</span><span class="p">():</span>  
+        <span class="n">year</span> <span class="o">=</span> <span class="n">freq</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1">#gets value of slider + 1
+</span>      <span class="k">if</span> <span class="n">year</span> <span class="o">&gt;</span> <span class="n">all_team</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="nb">max</span><span class="p">():</span>  
+            <span class="n">year</span> <span class="o">=</span> <span class="n">all_team</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1">#if slider value+1 is above max, reset to 0
+</span>        <span class="n">freq</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">year</span>  
+</code></pre></div></div>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">#Update the label on the button once the button is clicked
+</span>    <span class="k">def</span> <span class="nf">animate</span><span class="p">():</span>  
+        <span class="k">if</span> <span class="n">button</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="s">'► Play'</span><span class="p">:</span>  
+            <span class="n">button</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">'❚❚ Pause'</span>  
+      <span class="n">curdoc</span><span class="p">()</span><span class="o">.</span><span class="n">add_periodic_callback</span><span class="p">(</span><span class="n">animate_update</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>  <span class="c1">#50 is speed of animation
+</span>        <span class="k">else</span><span class="p">:</span>  
+            <span class="n">button</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">'► Play'</span>  
+      <span class="n">curdoc</span><span class="p">()</span><span class="o">.</span><span class="n">remove_periodic_callback</span><span class="p">(</span><span class="n">animate_update</span><span class="p">)</span>  
+
+    <span class="c1">#callback when button is clicked.
+</span>    <span class="n">button</span><span class="o">.</span><span class="n">on_click</span><span class="p">(</span><span class="n">animate</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The animate button was taken from <a href="https://github.com/bokeh/bokeh/blob/master/examples/app/gapminder/main.py">Gapminder Bokeh</a></p>
+
+<p>Update the WidgetBox with the button and run the bokeh server to see the animation.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">inputs</span> <span class="o">=</span> <span class="n">widgetbox</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span><span class="n">button</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/animation.gif" alt="enter image description here" /></p>
+
+<p>To plot the convex hull, we’d need to create few more variables.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">team_att</span> <span class="o">=</span><span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">team_id</span><span class="o">==</span><span class="mi">2</span><span class="p">]</span>  
+    <span class="n">team_def</span> <span class="o">=</span><span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">team_id</span><span class="o">==</span><span class="mi">1</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>We’ve now split the data frame to hold separate data for attacking and defending team, since we’d have to plot convex hull for each team.</p>
+
+<p>We then use numpy’s vstack feature to create the 2 arrays.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">t1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">team_att</span><span class="p">[</span><span class="n">team_att</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">team_att</span><span class="p">[</span><span class="n">team_att</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>  
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">team_def</span><span class="p">[</span><span class="n">team_def</span><span class="o">.</span><span class="n">time</span> <span class="o">==</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">team_def</span><span class="p">[</span><span class="n">team_def</span><span class="o">.</span><span class="n">time</span> <span class="o">==</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+</code></pre></div></div>
+
+<p>Once we have the arrays, we use the scipy convex hull package to get the vertices of the convex hull.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">hull</span><span class="o">=</span><span class="n">ConvexHull</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span>  
+    <span class="n">hull2</span><span class="o">=</span> <span class="n">ConvexHull</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>  
+    <span class="n">xc</span> <span class="o">=</span> <span class="n">t1</span><span class="p">[</span><span class="n">hull</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  
+    <span class="n">yc</span> <span class="o">=</span> <span class="n">t1</span><span class="p">[</span><span class="n">hull</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>  
+
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">t2</span><span class="p">[</span><span class="n">hull2</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  
+    <span class="n">ay</span> <span class="o">=</span> <span class="n">t2</span><span class="p">[</span><span class="n">hull2</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>Create 2 separate CDS to hold these values.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">source2</span> <span class="o">=</span> <span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">xc</span><span class="o">=</span><span class="n">xc</span><span class="p">,</span><span class="n">yc</span><span class="o">=</span><span class="n">yc</span><span class="p">))</span>  
+    <span class="n">source3</span> <span class="o">=</span> <span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">ay</span><span class="o">=</span><span class="n">ay</span><span class="p">))</span>
+
+    <span class="c1">#Plot the vertices as a patch
+</span>    <span class="n">team_Blue</span><span class="o">=</span><span class="n">plot</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s">'xc'</span><span class="p">,</span> <span class="s">'yc'</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">source2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">fill_color</span><span class="o">=</span><span class="s">'dodgerblue'</span><span class="p">)</span>  
+    <span class="n">team_red</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s">'ax'</span><span class="p">,</span> <span class="s">'ay'</span><span class="p">,</span><span class="n">source</span><span class="o">=</span><span class="n">source3</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">fill_color</span><span class="o">=</span><span class="s">'orangered'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>If you run the bokeh server now, the convex hull will be plotted only for the time 0 since we’ve not added source2 and source 3 in the slider call bck. In the function <strong>update_data</strong>, again add the above steps to plot the convex hull dynamically, based on the slider value.</p>
+
+<p>Now, the updated function <strong>update_data</strong> looks as below:</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="k">def</span> <span class="nf">update_data</span><span class="p">(</span><span class="n">attrname</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>  
+      
+        <span class="n">k</span> <span class="o">=</span> <span class="n">freq</span><span class="o">.</span><span class="n">value</span>  
+      
+        <span class="n">x</span> <span class="o">=</span> <span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span> <span class="o">==</span> <span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">x</span>  
+        <span class="n">y</span> <span class="o">=</span> <span class="n">all_team</span><span class="p">[</span><span class="n">all_team</span><span class="o">.</span><span class="n">time</span> <span class="o">==</span> <span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">y</span>  
+        <span class="n">source</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">player_id</span><span class="o">=</span><span class="n">player_id</span><span class="p">,</span><span class="n">color</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>  
+      
+      
+        <span class="n">t1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">team_att</span><span class="p">[</span><span class="n">team_att</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">team_att</span><span class="p">[</span><span class="n">team_att</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>  
+        <span class="n">t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">team_def</span><span class="p">[</span><span class="n">team_def</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">team_def</span><span class="p">[</span><span class="n">team_def</span><span class="o">.</span><span class="n">time</span><span class="o">==</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>  
+      
+        <span class="n">hull</span> <span class="o">=</span> <span class="n">ConvexHull</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span>  
+        <span class="n">hull2</span><span class="o">=</span> <span class="n">ConvexHull</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>  
+        <span class="n">xc</span> <span class="o">=</span> <span class="n">t1</span><span class="p">[</span><span class="n">hull</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  
+        <span class="n">yc</span> <span class="o">=</span> <span class="n">t1</span><span class="p">[</span><span class="n">hull</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>  
+      
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">t2</span><span class="p">[</span><span class="n">hull2</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  
+        <span class="n">ay</span> <span class="o">=</span> <span class="n">t2</span><span class="p">[</span><span class="n">hull2</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>  
+      
+      
+        <span class="n">source2</span><span class="o">.</span><span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">xc</span><span class="o">=</span><span class="n">xc</span><span class="p">,</span><span class="n">yc</span><span class="o">=</span><span class="n">yc</span><span class="p">)</span>  
+        <span class="n">source3</span><span class="o">.</span><span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">ay</span><span class="o">=</span><span class="n">ay</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>So now if you run the bokeh server, the convex hull also will be updated when the slider gets updated.</p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/convex.gif?raw=true" alt="enter image description here" /></p>
+
+<p>Now to toggle the convex hull on/off, add a CheckboxButtonGroup to the plot.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">checkbox_blue</span><span class="o">=</span><span class="n">CheckboxButtonGroup</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s">"Team Red"</span><span class="p">],</span><span class="n">button_type</span> <span class="o">=</span> <span class="s">"primary"</span><span class="p">)</span>  
+    <span class="n">checkbox_red</span><span class="o">=</span><span class="n">CheckboxButtonGroup</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s">"Team Blue"</span><span class="p">],</span><span class="n">button_type</span> <span class="o">=</span> <span class="s">"primary"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>There are multiple ways to toggle the convex hull on/off. I’ve used the CustomJS option to set the convex hull patch alpha when the toggle button is clicked.</p>
+
+<p>Update the plot.patch as below, so that the patch is initially not visible in the plot.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">#alpha is changed to 0
+</span>    <span class="n">team_Blue</span><span class="o">=</span><span class="n">plot</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s">'xc'</span><span class="p">,</span> <span class="s">'yc'</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">source2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">fill_color</span><span class="o">=</span><span class="s">'orangered'</span><span class="p">)</span>  
+    <span class="n">team_red</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s">'ax'</span><span class="p">,</span> <span class="s">'ay'</span><span class="p">,</span><span class="n">source</span><span class="o">=</span><span class="n">source3</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">fill_color</span><span class="o">=</span><span class="s">'dodgerblue'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Now add a customJS callback to these patches. This callback will update the patch alpha to 0.3. This is a shortcut to make this work. The other alternative solution would be to add the convex hull plot as a children to the plot layout.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">#l0.glyph.fill_alpha sets the alpha of the patch
+</span>    <span class="n">checkbox_blue</span><span class="o">.</span><span class="n">callback</span> <span class="o">=</span> <span class="n">CustomJS</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">l0</span><span class="o">=</span><span class="n">team_Blue</span><span class="p">,</span> <span class="n">checkbox</span><span class="o">=</span><span class="n">checkbox_blue</span><span class="p">),</span> <span class="n">code</span><span class="o">=</span><span class="s">"""  
+    l0.visible = 0 in checkbox.active;  
+    l0.glyph.fill_alpha = 0.3;  
+    """</span><span class="p">)</span>  
+    <span class="n">checkbox_red</span><span class="o">.</span><span class="n">callback</span> <span class="o">=</span> <span class="n">CustomJS</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">l0</span><span class="o">=</span><span class="n">team_red</span><span class="p">,</span> <span class="n">checkbox</span><span class="o">=</span><span class="n">checkbox_red</span><span class="p">),</span> <span class="n">code</span><span class="o">=</span><span class="s">"""  
+    l0.visible = 0 in checkbox.active;  
+    l0.glyph.fill_alpha = 0.3;  
+    """</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Add a paragraph label and update the WidgetBox and run the server.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">p</span> <span class="o">=</span> <span class="n">Paragraph</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s">"""Select team  to plot convex hull"""</span><span class="p">,</span>  
+    <span class="n">width</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>  
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">widgetbox</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span><span class="n">button</span><span class="p">,</span><span class="n">p</span><span class="p">,</span><span class="n">checkbox_blue</span><span class="p">,</span><span class="n">checkbox_red</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The completed output should be like this.</p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/hull.gif?raw=true" alt="enter image description here" /></p>
+
+<p>Since bokeh plots are easy to use, you can modify the plot based on your own preference.</p>
+
+<p>Hope this post provide a clear explanation on the steps involved. In case you’ve questions, please find my contact details on the contact page.</p>
+
+<p>The <strong>complete code</strong> can be found here.</p>
+
+<p><a href="https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/main.py"><strong>Animation Code</strong></a></p>
+
+<p>I’d highly appreciate your comments and feedback regarding the post/code used here.</p>
+
+<p>Thanks.</p>
+:ET

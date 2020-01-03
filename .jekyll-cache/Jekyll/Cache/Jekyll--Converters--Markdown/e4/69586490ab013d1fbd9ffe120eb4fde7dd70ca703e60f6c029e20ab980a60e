@@ -1,0 +1,93 @@
+I".<p>This post looks at creating a python script to automate the data collectiong and processing needed to build the visualization.</p>
+
+<p><b>Data Source: NASA JPL: <a href="https://cneos.jpl.nasa.gov/fireballs/">https://cneos.jpl.nasa.gov/fireballs/</a></b></p>
+
+<h3 id="data-collection-and-processing">Data Collection and Processing:</h3>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Data Processing for making Fireball Viz
+</span>
+<span class="c1">#Import packages
+</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">pi</span>
+
+<span class="c1">#Use NASA JPL API to get data
+</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">"https://ssd-api.jpl.nasa.gov/fireball.api"</span><span class="p">)</span>
+<span class="n">df</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s">'data'</span><span class="p">],</span><span class="n">columns</span><span class="o">=</span><span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s">'fields'</span><span class="p">])</span>
+
+<span class="c1">#Dropping fireballs with nan in either latitude or longitude
+</span>
+<span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s">'lat'</span><span class="p">,</span><span class="s">'lon'</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c1">#Setting proper format to date and extracting year from them
+</span>
+<span class="n">df</span><span class="p">[</span><span class="s">'date'</span><span class="p">]</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s">'date'</span><span class="p">])</span>
+<span class="n">df</span><span class="p">[</span><span class="s">'Year'</span><span class="p">]</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s">'date'</span><span class="p">]</span><span class="o">.</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">'</span><span class="si">%</span><span class="s">Y'</span><span class="p">)))</span>
+<span class="n">group</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s">'Year'</span><span class="p">)</span>
+<span class="n">angle_list</span><span class="o">=</span><span class="p">[]</span>
+
+<span class="c1">#For each group of years, calculating angle to make the plot
+</span>
+<span class="k">def</span> <span class="nf">split_into_parts</span><span class="p">(</span><span class="n">n_parts</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">n_parts</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">group</span><span class="p">:</span>
+    <span class="n">l</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="n">angle</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">angle_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">split_into_parts</span><span class="p">(</span><span class="n">l</span><span class="p">))</span>
+<span class="c1">#Get all angles into a flat list
+</span>
+<span class="n">flat_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">angle_list</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">]</span>
+<span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s">'date'</span><span class="p">,</span><span class="n">ascending</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">df</span><span class="p">[</span><span class="s">'Angle'</span><span class="p">]</span><span class="o">=</span><span class="n">flat_list</span>
+
+<span class="c1">#Creating a new dataframe to get diamter for each year. 
+#Recent years are closer to earth (lesser diameter). 
+#Then merging this dataframe to df
+</span>
+<span class="n">years</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s">'Year'</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<span class="n">year_pd</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">'Year'</span><span class="p">:</span><span class="n">years</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s">'Diameter'</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">years</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)})</span>
+<span class="n">df</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df</span><span class="p">,</span><span class="n">year_pd</span><span class="p">)</span>
+
+<span class="c1">#Now find x and y point to plot it later.
+</span>
+<span class="n">x_orbit</span><span class="p">,</span><span class="n">y_orbit</span><span class="o">=</span><span class="p">[],[]</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="n">x_orbit</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">v</span><span class="p">[</span><span class="s">'Diameter'</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="s">'Angle'</span><span class="p">]</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span><span class="p">)))</span>
+    <span class="n">y_orbit</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">v</span><span class="p">[</span><span class="s">'Diameter'</span><span class="p">]</span><span class="o">+</span><span class="mi">5</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="s">'Angle'</span><span class="p">]</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span><span class="p">)))</span>
+<span class="n">df</span><span class="p">[</span><span class="s">'X_Orbit'</span><span class="p">]</span><span class="o">=</span><span class="n">x_orbit</span>
+<span class="n">df</span><span class="p">[</span><span class="s">'Y_Orbit'</span><span class="p">]</span><span class="o">=</span><span class="n">y_orbit</span>
+
+<span class="c1">#Extra step to make the shape look good
+#(all fireballs images are focused towards earth) ;)
+</span>
+<span class="n">fireball_image</span><span class="o">=</span><span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">v</span><span class="p">[</span><span class="s">'Angle'</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">90</span><span class="p">:</span>
+        <span class="n">fireball_image</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fireball_image</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">df</span><span class="p">[</span><span class="s">'fireball_image'</span><span class="p">]</span><span class="o">=</span><span class="n">fireball_image</span>
+<span class="c1">#Save the file to a csv to import it to tableau
+</span><span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s">'processed_fireballs_python.csv'</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The entire code can be found here: <a href="https://github.com/samirak93/Fireballs-Data-Visualization/blob/master/FireBall.py">Code</a></p>
+
+<p><b>After this, the data is fed into Tableau to make the chart.</b></p>
+
+<p><b>Link to viz: <a href="https://public.tableau.com/profile/samirak93#!/vizhome/Fireball/Main?publish=yes">https://public.tableau.com/profile/samirak93#!/vizhome/Fireball/Main?publish=yes</a></b></p>
+
+<p><b>Final Viz:</b></p>
+
+<p><img src="https://raw.githubusercontent.com/samirak93/Fireballs-Data-Visualization/master/Main.png" width="700" /></p>
+
+<p>Feedbacks are appreciated!!</p>
+
+<p>Thank you.</p>
+:ET

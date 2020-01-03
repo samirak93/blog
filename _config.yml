@@ -9,14 +9,14 @@ site-twitter: #if your site has a twitter account, enter it here
 # Author Settings
 author: Samira Kumar # add your name
 author-img: samira-kumar.jpg # add your photo
-about-author: I am data scientist and this is my personal blog about sports analytics, machine Llearning and data visualisation. # add description
+about-author: I am data scientist and this is my personal blog about sports analytics, machine learning and data visualisation. # add description
 social-twitter: SamiraK93 # add your Twitter handle
 social-github: samirak93 # add your Github handle
 social-linkedin: samirakumar # add your Linkedin handle
 social-email: samirakumar@yahoo.com # add your Email address
 
 # Disqus
-discus-identifier: samirak93 # add your discus identifier
+discus-identifier: mr-brown # add your discus identifier
 
 # Tracker
 analytics: UA-112742997-1 # Google Analytics
@@ -28,7 +28,7 @@ plugins:
   - jekyll-paginate
   - jemoji
 
-paginate: 8
+paginate: 5
 paginate_path: "/page/:num"
 
 exclude: ["node_modules", "gulpfile.js", "package.json", "yarn.lock"]
