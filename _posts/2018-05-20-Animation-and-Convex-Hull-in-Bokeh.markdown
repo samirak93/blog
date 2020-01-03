@@ -3,7 +3,7 @@ layout: post
 title: Animation and convex hull in bokeh
 date: 2018-05-20
 description: This blog post looks at creating an animation slider (with Play and Pause buttons) to plot 2D coordinates of player movement in a soccer game and visualize the convex hull of the points.
-img: /blog_images/images/blog2/connect_github.png # Add image post (optional)
+img: blog_images/images/blog2/connect_github.png # Add image post (optional)
 fig-caption: # Add figcaption (optional)
 tags: [Bokeh Server App, Python, Soccer, Convex Hull]
 ---
