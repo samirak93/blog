@@ -1,3 +1,12 @@
+---
+layout: post
+title: Animation and convex hull in bokeh
+date: 2018-05-20
+description: This blog post looks at creating an animation slider (with Play and Pause buttons) to plot 2D coordinates of player movement in a soccer game and visualize the convex hull of the points.
+img: /blog_images/images/blog2/connect_github.png # Add image post (optional)
+fig-caption: # Add figcaption (optional)
+tags: [Bokeh Server App, Python, Soccer, Convex Hull]
+---
 
 This blog post looks at creating an animation slider (with Play and Pause buttons) to plot 2D coordinates of player movement in a soccer game. Also, this post explains the steps to create a toggle button, to show/hide the convex hull plot of the teams. I've used [Bokeh](https://bokeh.pydata.org) to plot the viz. Bokeh gives a good looking viz in the browser and also provides smooth interface for animation. I've also tried the same with [Matplotlib](https://matplotlib.org) and it was successful. But the features of bokeh (compared to matplotlib) makes it a better choice, for this purpose alone. I could write a separate blog post to outline the process in Matplotlib. 
 
@@ -28,13 +37,11 @@ Once the player and team tags are added, we'd have the data as below
     all_team = pd.DataFrame(df, columns=headers)
  ```  
 
-
- Here, 
+ Here,
  x and y: Player coordinates on the pitch, 
- team_id: 1 and 2 for each team respectively, 3 for ball, 
+ team_id: 1 and 2 for each team respectively, 3 for ball,
  player_id: Ranges from 1-11 for both teams, 12 for ball
- time: time of sequence. 
-
+ time: time of sequence.
 
 Now import all necessary packages.
 
@@ -54,16 +61,12 @@ My game sequence time starts at 0. So I've created a variable to initialise time
 
 ```py
     i=0  
-      
     x = all_team[all_team.time==i].x  #Calculate x based on time
     y = all_team[all_team.time==i].y  #Calculate y based on time
 ```
 
+To plot the player labels and team colour, I've created 2 separate variables **player_id** and **c**. This is bit like hard coding the labels and colour. Since these values will not change for the whole sequence, it doesn't matter if we hard code this or use any other alternative method. You could also use **factor_cmap** feature on bokeh, for player color.
 
-To plot the player labels and team colour, I've created 2 separate variables **player_id** and **c**. This is bit like hard coding the labels and colour. Since these values will not change for the whole sequence, it doesn't matter if we hard code this or use any other alternative method. You could also use **factor_cmap** feature on bokeh, for player color. 
- 
- 
- 
 ```py
     player_id=['1','2','3','4','5','6','7','8','9','10','11','1','2','3','4','5','6','7','8','9','10','11',' ']  
     
@@ -71,7 +74,6 @@ To plot the player labels and team colour, I've created 2 separate variables **p
     
     c=['dodgerblue','dodgerblue','dodgerblue','dodgerblue','dodgerblue','dodgerblue','dodgerblue','dodgerblue','dodgerblue','dodgerblue','dodgerblue','orangered','orangered','orangered','orangered','orangered','orangered','orangered','orangered','orangered','orangered','orangered','gold']
 ```
-
 
 Once we've the required variables, create the **ColumnDataSource** as below.
 
@@ -158,9 +160,7 @@ Now add the slider to the plot layout using the Widgetbox.
 
 Now if you run the bokeh serve again, you should be able to see the slider and the plot gets updated based on the change in the slider. 
 
-
-![enter image description here](https://raw.githubusercontent.com/samirak93/analytics/gh-pages/blog_images/images/blog2/Screen%20Shot%202018-05-20%20at%201.22.17%20PM.png)
-
+![enter image description here](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/plot.png)
 
 Now add the button to create the play and pause animation.
 
@@ -168,8 +168,7 @@ Now add the button to create the play and pause animation.
     button = Button(label='► Play', width=60)
 ```
 
-To allow ► symbol in your browser, add "**# -*- coding: utf-8 -*-**" in the beginning of your code.
-
+To allow `► symbol` in your browser, add `**# -*- coding: utf-8 -*-**` in the beginning of your code.
 
 ```py
     def animate_update():  
@@ -177,9 +176,9 @@ To allow ► symbol in your browser, add "**# -*- coding: utf-8 -*-**" in the be
       if year > all_team.time.max():  
             year = all_team.time[0]  #if slider value+1 is above max, reset to 0
         freq.value = year  
- ```    
-      
-  ```py    
+ ```
+
+```py
     #Update the label on the button once the button is clicked
     def animate():  
         if button.label == '► Play':  
@@ -188,32 +187,29 @@ To allow ► symbol in your browser, add "**# -*- coding: utf-8 -*-**" in the be
         else:  
             button.label = '► Play'  
       curdoc().remove_periodic_callback(animate_update)  
-      
+
     #callback when button is clicked.
     button.on_click(animate)
 ```
 
+The animate button was taken from [Gapminder Bokeh](https://github.com/bokeh/bokeh/blob/master/examples/app/gapminder/main.py)
 
-The animate button was taken from here: [Gapminder Bokeh](https://github.com/bokeh/bokeh/blob/master/examples/app/gapminder/main.py)
-
-Update the WidgetBox with the button and run the bokeh server to see the animation. 
+Update the WidgetBox with the button and run the bokeh server to see the animation.
 
 ```py
     inputs = widgetbox(freq,button)
 ```
 
+![enter image description here](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/animation.gif)
 
-![enter image description here](https://raw.githubusercontent.com/samirak93/analytics/gh-pages/blog_images/images/blog2/ezgif-1-0e4553e448.gif)
-
-
-To plot the convex hull, we'd need to create few more variables. 
+To plot the convex hull, we'd need to create few more variables.
 
 ```py
     team_att =all_team[all_team.team_id==2]  
     team_def =all_team[all_team.team_id==1]
 ```
 
-We've now split the data frame to hold separate data for attacking and defending team, since we'd have to plot convex hull for each team. 
+We've now split the data frame to hold separate data for attacking and defending team, since we'd have to plot convex hull for each team.
 
 We then use numpy's vstack feature to create the 2 arrays.
 
@@ -229,7 +225,7 @@ Once we have the arrays, we use the scipy convex hull package to get the vertice
     hull2= ConvexHull(t2)  
     xc = t1[hull.vertices, 0]  
     yc = t1[hull.vertices, 1]  
-      
+
     ax = t2[hull2.vertices, 0]  
     ay = t2[hull2.vertices, 1]
 ```
@@ -239,7 +235,7 @@ Create 2 separate CDS to hold these values.
 ```py
     source2 = ColumnDataSource(data=dict(xc=xc,yc=yc))  
     source3 = ColumnDataSource(data=dict(ax=ax,ay=ay))
-    
+
     #Plot the vertices as a patch
     team_Blue=plot.patch('xc', 'yc', source=source2, alpha=0.3, line_width=3, fill_color='dodgerblue')  
     team_red = plot.patch('ax', 'ay',source=source3, alpha=0.3, line_width=3,fill_color='orangered')
@@ -278,8 +274,7 @@ Now, the updated function **update_data** looks as below:
 
 So now if you run the bokeh server, the convex hull also will be updated when the slider gets updated.
 
-![enter image description here](https://github.com/samirak93/analytics/blob/gh-pages/blog_images/images/blog2/convex.gif?raw=true)
-
+![enter image description here](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/convex.gif?raw=true)
 
 Now to toggle the convex hull on/off, add a CheckboxButtonGroup to the plot. 
 
@@ -289,7 +284,6 @@ Now to toggle the convex hull on/off, add a CheckboxButtonGroup to the plot.
 ```
 
 There are multiple ways to toggle the convex hull on/off. I've used the CustomJS option to set the convex hull patch alpha when the toggle button is clicked. 
-
 
 Update the plot.patch as below, so that the patch is initially not visible in the plot.
 
@@ -318,23 +312,21 @@ Add a paragraph label and update the WidgetBox and run the server.
 ```py
     p = Paragraph(text="""Select team  to plot convex hull""",  
     width=200)  
-      
+
     inputs = widgetbox(freq,button,p,checkbox_blue,checkbox_red)
 ```
 
-
 The completed output should be like this.
 
-![enter image description here](https://github.com/samirak93/analytics/blob/gh-pages/blog_images/images/blog2/ezgif-1-ad8f686b11.gif?raw=true)
+![enter image description here](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/hull.gif?raw=true)
 
+Since bokeh plots are easy to use, you can modify the plot based on your own preference.
 
-Since bokeh plots are easy to use, you can modify the plot based on your own preference. 
+Hope this post provide a clear explanation on the steps involved. In case you've questions, please find my contact details on the contact page.
 
-Hope this post provide a clear explanation on the steps involved. In case you've questions, please find my contact details on the contact page. 
+The **complete code** can be found here.
 
-The **complete code** can be found here. 
-
-[**Animation Code**](https://github.com/samirak93/analytics/blob/gh-pages/blog_images/images/blog2/main.py)
+[**Animation Code**](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog2/main.py)
 
 I'd highly appreciate your comments and feedback regarding the post/code used here.
 

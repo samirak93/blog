@@ -24,7 +24,7 @@ myapp **(folder)**<br/>
 
 This is how my repository looks like.
 
-![alt text](https://raw.githubusercontent.com/samirak93/blog/master/asset/img/blog_images/images/blog1/repo.PNG)
+![alt text](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/repo.PNG)
 
 This is easy since this is how you'd have setup your folders to run the "myapp" locally in your system.
 
@@ -74,14 +74,15 @@ The issue I'd faced with requirements is that bokeh and tornado version has to b
 python-2.7.14
 ```
 
-**Note:-** Heroku supports only 2.7.14 version, if your python version is 2.7. 
+**Note:-** Heroku supports only 2.7.14 version, if your python version is 2.7.
 
-Once you create the 3 files, the repository herokuapp looks like this. 
+Once you create the 3 files, the repository herokuapp looks like this.
 
-![herokuapp repository](https://raw.githubusercontent.com/samirak93/blog/master/asset/img/blog_images/images/blog1/herokuapp.png)
+![herokuapp repository](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/herokuapp.png)
 
 herokuapp (GitHub repository)<br/>
-```
+
+```sh
 +-Procfile<br/>
 +-requirements.txt<br/>
 +-runtime.txt<br/>
@@ -92,7 +93,7 @@ Now it's time to deploy the bokeh plot. You could use git commands to deploy the
 
 Go to the heroku dashboard [https://dashboard.heroku.com/apps/](https://dashboard.heroku.com/apps/) and select the app you've created. Once inside it, go to the "**deploy**" tab and select "**Deployment method**" as GitHub and connect your GitHub account with the app.
 
-![GitHub Connect](https://raw.githubusercontent.com/samirak93/blog/master/asset/img/blog_images/images/blog1/connect_github.png)
+![GitHub Connect](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/connect_github.png)
 
 Once that is completed, scroll down and select the repository you've created for the bokeh plot. The repository can be selected from "**App connected to GitHub**" on the same deploy page. In my case, the repository is herokuapp.
 
@@ -107,7 +108,7 @@ After successful deployment, you can view the app from  `https://**your_app_name
 
 The app log (post deployment) can be seen by selecting more--> view logs in your app dashboard page.
 
-![app log](https://raw.githubusercontent.com/samirak93/blog/master/asset/img/blog_images/images/blog1/app_log.png)
+![app log](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/app_log.png)
 
 All the runtime issues and errors will be provided on the log.
 
