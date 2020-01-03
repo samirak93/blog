@@ -47,9 +47,9 @@ So the whole **myapp** folder is within my main repository, **herokuapp**. Insid
 web: bokeh serve --port=$PORT --allow-websocket-origin=heroku_app_name.herokuapp.com --address=0.0.0.0 --use-xheaders myapp
 ```
 
-This is where you'd have to mention your app name (created in heroku).  replace "**heroku_app_name**" above with the name of your app. Don't change anything else in the procfile. "myapp" in Procfile refers to the folder you've created within the GitHub repository.
+This is where you'd have to mention your app name (created in heroku) and replace "**heroku_app_name**" above with the name of your app. Don't change anything else in the procfile. "myapp" in Procfile refers to the folder you've created within the GitHub repository.
 
-This Procfile is similar to the command "*`bokeh serve --show myapp`*" that we'd run to display the server plot locally.
+This Procfile is similar to the command `bokeh serve --show myapp` that we'd run to display the server plot locally.
 
 ### requirements.txt
 
@@ -80,7 +80,7 @@ Once you create the 3 files, the repository herokuapp looks like this.
 
 ![herokuapp repository](https://raw.githubusercontent.com/samirak93/blog/master/assets/img/blog_images/images/blog1/herokuapp.png)
 
-herokuapp (GitHub repository)<br/>
+- herokuapp (GitHub repository)
 
 ```sh
 +-Procfile<br/>
