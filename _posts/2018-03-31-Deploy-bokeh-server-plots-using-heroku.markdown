@@ -3,7 +3,7 @@ layout: post
 title: Deploy bokeh server plot using heroku
 date: 2018-03-31
 description: This is a small blog post, guiding you with steps to deploy a bokeh python server plot using Heroku.
-img: i-rest.jpg # Add image post (optional)
+img: blog_images/images/blog1/connect_github.png # Add image post (optional)
 fig-caption: # Add figcaption (optional)
 tags: [Heroku, Bokeh Server App, Python]
 ---
