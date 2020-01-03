@@ -1,6 +1,6 @@
 title: Samira Kumar
-description: # this means to ignore newlines until "baseurl:"
-Personal Blog about Sports, Analytics, Machine Learning and Data Visualisations.
+description: Personal Blog about Sports, Analytics, Machine Learning and Data Visualisations.
+# this means to ignore newlines until "baseurl:"
 permalink: ':title/'
 baseurl: "/blog" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
