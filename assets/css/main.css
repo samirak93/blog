@@ -158,7 +158,7 @@ dfn {
  */
 mark {
   background-color: #ff0;
-  color: #000;
+  color: dodgerblue;
 }
 
 /**
@@ -948,7 +948,7 @@ table tfoot td {
   -webkit-border-radius: 100%;
           border-radius: 100%;
   overflow: hidden;
-  background-color: #333030;
+  background-color: dodgerblue;
 }
 
 .about img {
@@ -975,7 +975,7 @@ table tfoot td {
   padding-bottom: 15px;
   font-size: 16px;
   text-transform: uppercase;
-  color: #333030;
+  color: dodgerblue;
   font-weight: 700;
 }
 
@@ -1078,7 +1078,7 @@ table tfoot td {
 }
 
 .contact ul li a {
-  color: #515151;
+  color: dodgerblue;
   display: block;
   padding: 5px;
   font-size: 18px;
@@ -1088,7 +1088,7 @@ table tfoot td {
 }
 
 .contact ul li a:hover {
-  color: #333030;
+  color: #515151; 
   -webkit-transform: scale(1.2);
       -ms-transform: scale(1.2);
           transform: scale(1.2);
