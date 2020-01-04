@@ -16,7 +16,7 @@ social-linkedin: samirakumar # add your Linkedin handle
 social-email: samirakumar@yahoo.com # add your Email address
 
 # Disqus
-discus-identifier: mr-brown # add your discus identifier
+discus-identifier: samirak93 # add your discus identifier
 
 # Tracker
 analytics: UA-112742997-1 # Google Analytics
@@ -28,7 +28,7 @@ plugins:
   - jekyll-paginate
   - jemoji
 
-paginate: 5
+paginate: 7
 paginate_path: "/page/:num"
 
 exclude: ["node_modules", "gulpfile.js", "package.json", "yarn.lock"]
